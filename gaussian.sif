@@ -1,0 +1,126 @@
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "." "."
+  Include Path ""
+  Results Directory ""
+End
+
+
+Simulation
+  Max Output Level = 5
+  Coordinate System = Cartesian
+  Coordinate Mapping(3) = 1 2 3
+  Simulation Type = Steady
+  Steady State Max Iterations = 20
+  Output Intervals = 1
+  Timestepping Method = BDF
+  BDF Order = 2
+  Timestep intervals = 1
+  Timestep Sizes = 0.5
+  Solver Input File = gaussian.sif
+  Post File = case_test_steady.vtu
+End
+
+
+Constants
+  Gravity(4) = 0 -1 0 9.82
+  Stefan Boltzmann = 5.67e-08
+  Permittivity of Vacuum = 1.0
+  Permeability of Vacuum = 1.0
+  Boltzmann Constant = 1.3807e-23
+  Unit Charge = 1.602e-19
+End
+
+Body 1
+  Target Bodies(1) = 1
+  Name = "Body 1"
+  Equation = 1
+  Material = 1
+End
+
+
+Solver 1
+  Equation = Vector Helmholtz Equation
+  Variable = E[E re:1 E im:1]
+  Procedure = "VectorHelmholtz" "VectorHelmholtzSolver"
+! seems to converge ok without
+!  Linear System Preconditioning Damp Coefficient im = 1.0
+  Exec Solver = Before Simulation
+!  Element = p:2
+  Nonlinear System Max Iterations = 1
+  Linear System Solver = Iterative
+  Linear System Iterative Method = BiCGStabl ! gcr ! idrs
+  Linear System Max Iterations = 2000
+  Linear System Convergence Tolerance = 1.0e-12
+  BiCGstabl polynomial degree = 8 ! 4...8
+  Linear System Preconditioning = vanka !ILU2 !vanka
+  Linear System ILUT Tolerance = 1.0e-3
+  Linear System Abort Not Converged = False
+  Linear System Residual Output = 10
+  Linear System Precondition Recompute = 1
+  Idrs Parameter = 6
+  
+!  Linear System Row Equilibration = True
+!  Quadratic Approximation = Logical True ! piola automatically follows 2nd order
+End
+
+
+
+Solver 2
+  Equation = Vector Helmholtz Post Process
+  Field Variable = Electric field E[Electric field re E:3 Electric field im E:3]
+  Calculate Electric Field = True
+  Calculate Magnetic Field Strength = True
+  Calculate Energy Functional = True
+  Calculate Poynting Vector = True
+  Calculate Div of Poynting Vector = True
+
+  Calculate Nodal Fields = False
+  Calculate Elemental Fields = True
+
+  Procedure = "VectorHelmholtz" "VectorHelmholtzCalcFields"
+  Exec Solver = Before Simulation
+!  Element = p:2
+  Nonlinear System Max Iterations = 1
+
+  Linear System Solver = Iterative
+  Linear System Iterative Method = BiCGStab
+  Linear System Max Iterations = 500
+  Linear System Convergence Tolerance = 1.0e-10
+  BiCGstabl polynomial degree = 4
+  Linear System Preconditioning = ILU0
+  Linear System ILUT Tolerance = 1.0e-3
+  Linear System Abort Not Converged = True
+  Linear System Residual Output = 20
+  Linear System Precondition Recompute = 1
+End
+
+Equation 1
+  Name = "Equation 1"
+ $ k0 = 2*pi
+ $ beta0 = k0
+ $ w0 = 1.5
+  Angular Frequency = $ k0
+  Active Solvers(2) = 1 2
+End
+
+Material 1
+  Name = "Air (room temperature)"
+  Relative Permittivity = 1.0
+  Relative Permittivity = 1.0
+End
+
+Boundary Condition 1
+  Target Boundaries(1) = 1
+  Name = "Inport"
+  Electric Robin Coefficient im = $ beta0
+  Magnetic Boundary Load im 2 = Variable Coordinate 1, Coordinate 2
+    Real MATC "-2*beta0*exp(-(tx(0)*tx(0)+tx(1)*tx(1))/(w0 * w0))"
+End
+
+Boundary Condition 2
+  Target Boundaries(3) = 2 3 4
+  Name = "Outport"
+  Electric Robin Coefficient im = $ beta0
+End
+
